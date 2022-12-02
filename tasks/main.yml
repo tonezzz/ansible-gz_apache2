@@ -1,0 +1,15 @@
+---
+
+- name: Apache2 prepare
+  tags: [check, apache2_check]
+  block:
+  - set_fact:
+      gz_a2_cfg: "{{gz_apache2_config}}"
+  #- debug: var=opts_apache2
+  #- meta: end_play
+
+- {name: apt       ,when: (opts_apache2.apt is defined)       ,vars: {opts_apt:       "{{ gz_a2_cfg.apt       | combine(opts_apache2.apt,recursive=True) }}"}       ,include_role: {name: gz_apt} }
+- {name: inst      ,when: (opts_apache2.inst is defined)      ,vars: {opts_inst:      "{{ gz_a2_cfg.inst      | combine(opts_apache2.inst,recursive=True) }}"}      ,include_tasks: inst.yml }
+- {name: pagespeed ,when: (opts_apache2.pagespeed is defined) ,vars: {opts_pagespeed: "{{ gz_a2_cfg.pagespeed | combine(opts_apache2.pagespeed,recursive=True) }}"} ,include_tasks: pagespeed.yml }
+- {name: mods      ,when: (opts_apache2.mods is defined)      ,vars: {opts_mods:      "{{ gz_a2_cfg.mods      | combine(opts_apache2.mods,recursive=True) }}"}      ,include_tasks: mods.yml }
+- {name: websites  ,when: (opts_apache2.websites is defined)  ,vars: {opts_websites:  "{{gz_a2_cfg.websites}}"}  ,include_tasks: sites.yml }

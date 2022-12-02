@@ -1,0 +1,11 @@
+---
+
+- debug: var=opts_site
+
+- name: Add SSL (Let's Encrypt)
+  vars:
+    opts_letsencrypt:
+      ssl:
+        domains:
+        - {domain: "{{opts_site.domain}}" }
+  include_role: name=gz_letsencrypt

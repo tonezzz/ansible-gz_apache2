@@ -1,0 +1,131 @@
+---
+
+#apache2
+- name: site prepare
+  tags: [check, apache2_check]
+  vars:
+    my_site: "{{ gz_apache2_config.site | combine(opts_site,recursive=True) }}"
+  block:
+  - name: Create site dirs v2
+    when: (my_site.to_do.create_dirs is defined) and my_site.to_do.create_dirs
+    block:
+    - name: Create site dirs
+      vars:
+        opts_create_dirs_v2:
+        - {path: "{{my_site.dirs.htdocs}}"        ,owner: "{{my_site.uid}}" ,group: "{{my_site.gid}}" ,mode: 'u=rw,g=r,o=r'  ,opts: recurse=yes }
+        - {path: "{{my_site.dirs.logs}}"          ,owner: "{{my_site.uid}}" ,group: "{{my_site.gid}}" ,mode: 'u=rw,g=r,o=r'  ,opts: recurse=yes }
+        - {path: "{{my_site.dirs.backups}}"       ,owner: "{{my_site.uid}}" ,group: "{{my_site.gid}}" ,mode: 'u=rw,g=r,o=r'  ,opts: recurse=yes }
+        - {path: "{{my_site.dirs.certs}}"         ,owner: "{{my_site.uid}}" ,group: "{{my_site.gid}}" ,mode: 'u=rw,g=r,o=r'  ,opts: recurse=yes }
+        - {path: "{{my_site.dirs.phptmp}}"        ,owner: "{{my_site.uid}}" ,group: "{{my_site.gid}}" ,mode: 'u=rw,g=r,o=r'  ,opts: recurse=yes }
+        - {path: "{{my_site.dirs.apache2_logs}}"  ,owner: "{{my_site.uid}}" ,group: "{{my_site.gid}}" ,mode: 'u=rw,g=r,o=r'  ,opts: recurse=yes }
+      include_role: name=gz_common tasks_from=create_dirs_v2
+    #- debug: var=my_site
+    #- meta: end_play
+    - name: / permission
+      ansible.builtin.file:
+        path: "{{my_site.dirs.root}}"
+        mode: "u=rwx,g=rx,o=rx"
+    - name: htdocs permission
+      tags: [xnever]
+      ansible.builtin.file:
+        path: "{{my_site.dirs.htdocs}}"
+        mode: "a+X"
+        recurse: yes
+  
+  - name: Create index file
+    when: (my_site.to_do.create_index is defined) and my_site.to_do.create_index
+    block:
+    - stat: path="{{my_site.dirs.htdocs}}{{my_site.index_name}}"
+      register: file_check
+    - name: Create index file
+      when: file_check.stat.exists==false
+      ansible.builtin.template:
+        src: "{{my_site.index_tpl}}"
+        dest: "{{my_site.dirs.htdocs}}{{ my_site.index_name}}"
+  
+  - name: Create phpinfo file
+    when: (my_site.to_do.create_phpinfo is defined) and my_site.to_do.create_phpinfo
+    ansible.builtin.copy:
+      src: "{{my_site.phpinfo_file}}"
+      dest: "{{my_site.dirs.htdocs}}/{{my_site.phpinfo_name}}"
+
+  - name: Create .htaccess file
+    when: (my_site.to_do.create_htaccess is defined) and my_site.to_do.create_htaccess
+    vars:
+      htaccess_file: "{{my_site.dirs.htdocs}}.htaccess"
+    block:
+    - debug: var=htaccess_file
+    - name: redirect https
+      when: (my_site.htaccess.redirect_https) is defined and my_site.htaccess.redirect_https
+      ansible.builtin.blockinfile:
+        create: true
+        marker: "#{mark} Redirect https"
+        path: "{{htaccess_file}}"
+        block: |
+          RewriteEngine On
+          RewriteCond %{HTTPS} off
+          RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+    - name: redirect host
+      when: (my_site.htaccess.redirect_host) is defined and my_site.htaccess.redirect_host
+      ansible.builtin.blockinfile:
+        create: true
+        marker: "#{mark} Redirect host"
+        path: "{{htaccess_file}}"
+        block: |
+          RewriteEngine On
+          RewriteCond %{HTTP_HOST} !^{{my_site.htaccess.redirect_host}}$ [NC]
+          RewriteRule ^(.*)$ {{my_site.htaccess.redirect_host}}/$1 [R=301,L]
+    - name: redirect all
+      when: (my_site.htaccess.redirect_all) is defined and my_site.htaccess.redirect_all
+      ansible.builtin.blockinfile:
+        create: true
+        path: "{{htaccess_file}}"
+        marker: "#{mark} Redirect all"
+        block: |
+          RewriteEngine On
+          RewriteBase /
+          RewriteCond %{HTTPS} off [OR]
+          RewriteCond %{HTTP_HOST} !^{{my_site.htaccess.redirect_all}}$
+          RewriteRule ^(.*)$ https://{{my_site.htaccess.redirect_all}}/$1 [R=301,L]
+  #####
+  - name: Create http (vhost:80)
+    when: (my_site.to_do.create_http is defined) and my_site.to_do.create_http
+    block:
+    - name: a2dissite {{my_site.servername}}    #Must use servername
+      when: (my_site.to_do.a2ensite is defined) and my_site.to_do.a2ensite
+      ignore_errors: yes
+      command: a2dissite {{my_site.servername}}
+    - name: Create vhost:80
+      ansible.builtin.template:
+        src: "{{my_site.vhost_tpl}}"
+        dest: "{{my_site.sites_available_dir}}{{my_site.site_conf_name}}.conf"
+    - name: a2ensite {{my_site.servername}}     #Must use servername
+      when: (my_site.to_do.a2ensite is defined) and my_site.to_do.a2ensite
+      command: a2ensite {{my_site.servername}}
+      notify: [restart apache2]
+  #####
+  - name: Create https (vhost:443)
+    when: (my_site.to_do.create_https is defined) and my_site.to_do.create_https
+    vars:
+      certs_file: "{{my_site.dirs.certs}}{{my_site.site_conf_name}}.crt"
+      private_key_file: "{{my_site.dirs.certs}}{{my_site.site_conf_name}}.key"
+      https:
+        port: 443
+        SSLCertificateFile: "{{certs_file}}"
+        SSLCertificateKeyFile: "{{private_key_file}}"
+        #SSLCertificateChainFile:
+    block:
+    - name: a2dissite {{my_site.servername}}_ssl    #Must use servername
+      when: (my_site.to_do.a2ensite is defined) and my_site.to_do.a2ensite
+      ignore_errors: yes
+      command: a2dissite {{my_site.servername}}_ssl
+    - name: Create vhost:443
+      ansible.builtin.template:
+        src: "{{my_site.vhost_tpl}}"
+        dest: "{{my_site.sites_available_dir}}{{my_site.site_conf_name_ssl}}.conf"
+    - ansible.builtin.service: name=apache2 state=restarted
+    - {name: SSL (Self signed) ,include_tasks: ssl_self_signed.yml }
+    - name: a2ensite {{my_site.servername}}_ssl     #Must use servername
+      when: (my_site.to_do.a2ensite is defined) and my_site.to_do.a2ensite
+      command: a2ensite {{my_site.servername}}_ssl
+      notify: [restart apache2]  #Notify in add_websites.yml instead.

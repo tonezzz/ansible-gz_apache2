@@ -1,0 +1,35 @@
+---
+
+gz_apache2_config:
+  tmp_dir: /tmp/
+
+  apt:
+    inst:
+      #key_items:
+      #- {keyserver: keyserver.ubuntu.com ,id: 78BD65473CB3BD13 }
+      pkg:
+      - libapache2-mod-proxy-uwsgi
+      - libxml2-dev
+
+  inst:
+    pkg:
+    - apache2
+
+  mods:
+    a2en: []
+    a2dis: []
+
+  pagespeed:
+    url: https://dl-ssl.google.com/dl/linux/direct/
+    file: mod-pagespeed-stable_current_amd64.deb
+
+  websites: {} #Default when creating website
+
+  site:
+    vhost_tpl: vhost.conf.j2
+    index_tpl: index.php.j2
+    index_name: index.php
+    phpinfo_file: phpinfo.php
+    phpinfo_name: phpinfo.php
+    sites_available_dir: /etc/apache2/sites-available/
+    #blocks: []

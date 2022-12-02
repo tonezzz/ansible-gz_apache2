@@ -1,0 +1,11 @@
+---
+
+- name: site_v2_dirs
+  loop: "{{ q('dict',opts_site_v2_dirs.dir_items) }}"
+  vars:
+    opts_create_dirs_v2:
+    - path: "{{item.value.src}}"
+      owner: "{{item.value.owner | default(opts_site_v2_dirs.dir_opts.owner) | default(omit) }}"
+      group: "{{item.value.group | default(opts_site_v2_dirs.dir_opts.group) | default(omit) }}"
+      mode: "{{item.value.mode | default(opts_site_v2_dirs.dir_opts.mode) | default(omit) }}"
+  include_role: name=gz_common tasks_from=create_dirs_v2

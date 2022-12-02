@@ -1,0 +1,12 @@
+---
+
+- debug: var=opts_inst.pkg
+
+- name: Apache2 install
+  when: opts_inst is defined
+  apt:
+    #update_cache: yes
+    force_apt_get: yes
+    #pkg: "{{opts_inst.pkg}}}"
+    pkg:
+    - apache2

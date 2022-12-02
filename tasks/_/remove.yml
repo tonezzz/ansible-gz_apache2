@@ -1,0 +1,39 @@
+---
+
+- name: Remove /etc/apache2/sites-enabled/
+  when: args.remove.site_configs is defined
+  loop: "{{args.remove.site_configs}}"
+  vars:
+    cmd: rm -rf /etc/apache2/sites-enabled/{{item}}*
+  #debug: var=cmd
+  shell: "{{cmd}}"
+  notify: [restart apache2]
+
+- name: Remove /etc/apache2/sites-available/
+  when: args.remove.site_configs is defined
+  loop: "{{args.remove.site_configs}}"
+  vars:
+    cmd: rm -rf /etc/apache2/sites-available/{{item}}*
+  #debug: var=cmd
+  shell: "{{cmd}}"
+  notify: [restart apache2]
+
+- name: Remove /var/www/...
+  when: args.remove.site_files is defined
+  loop: "{{args.remove.site_files}}"
+  vars:
+    cmd: rm -rf /var/www/{{item}}
+  #debug: var=cmd
+  shell: "{{cmd}}"
+  notify: [restart apache2]
+
+
+- name: Remove /var/log/apache2/...
+  when: args.remove.site_files is defined
+  loop: "{{args.remove.site_files}}"
+  vars:
+    cmd: rm -rf /var/log/apache2/{{item}}
+  #debug: var=cmd
+  shell: "{{cmd}}"
+  notify: [restart apache2]
+

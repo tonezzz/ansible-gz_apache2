@@ -1,0 +1,7 @@
+---
+
+- name: Enable NameVirtualhHost
+  ansible.builtin.template:
+    src: "{{apache2_config.apache2.cfg.tpl}}"
+    dest: "{{apache2_config.apache2.cfg.dest}}"
+  tags: ['apache2_config']

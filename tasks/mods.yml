@@ -1,0 +1,20 @@
+---
+
+- name: a2dismod
+  tags: [a2dismod]
+  notify: [restart apache2]
+  when: (opts_mods.a2dis is defined)
+  loop: "{{opts_mods.a2dis}}"
+  vars:
+    cmd: a2dismod {{item}}
+  shell: "{{cmd}}"
+  ignore_errors: "{{opts_mods.ignore_errors | default(true) }}"
+
+- name: a2enmod
+  notify: [restart apache2]
+  when: (opts_mods.a2en is defined)
+  loop: "{{opts_mods.a2en}}"
+  vars:
+    cmd: a2enmod {{item}}
+  shell: "{{cmd}}"
+  ignore_errors: "{{opts_mods.ignore_errors | default(true) }}"

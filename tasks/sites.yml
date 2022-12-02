@@ -1,0 +1,7 @@
+---
+
+- name: Setup websites
+  loop: "{{opts_websites.sites}}"
+  loop_control: {loop_var: opts_site}
+  include_tasks: site.yml
+

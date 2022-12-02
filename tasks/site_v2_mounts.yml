@@ -1,0 +1,13 @@
+---
+
+- name: site_v2_dirs
+  loop: "{{ q('dict',opts_site_v2_mounts.mount_items) }}"
+  loop_control: {loop_var: mount_item }
+  vars:
+  mount:
+    path:     "{{mount_item.value.path}}"
+    src:      "{{mount_item.value.src}}"
+    fstype:   "{{mount_item.value.fstype | default(opts_site_v2_mounts.mount_opts.fstype) | default('none') }}"
+    state:    "{{mount_item.value.state | default(opts_site_v2_mounts.mount_opts.state) | default('mounted') }}"
+    opts:     "{{mount_item.value.opts | default(opts_site_v2_mounts.mount_opts.opts) | default(omit) }}"
+    boot:     "{{mount_item.value.boot | default(opts_site_v2_mounts.mount_opts.fstype) | default('no') }}"

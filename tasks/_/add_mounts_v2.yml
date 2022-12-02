@@ -1,0 +1,27 @@
+---
+
+#Example
+#    vars:
+#      args:
+#        add:
+#          mounts: "{{site.mounts}}"
+#          mount_opts: {uid: "{{site.user}}" ,gid: "{{site.user}}" }
+
+- name: Add mounts v2
+  when: args.mounts_v2 is defined
+  loop: "{{args.mounts_v2}}"
+  loop_control: {loop_var: mount_item}
+  #debug: var=mount_item
+  mount:
+    src: "{{ mount_item.src | default(omit) }}"
+    path: "{{ mount_item.path | default(omit) }}"
+    state: "{{ mount_item.state | default(omit) }}"
+    fstype: "{{ mount_item.fstype | default(omit) }}"
+    opts: "{{ mount_item.opts | default(omit) }}"
+    #state: "{{ mount_item.fstype | default(omit) }}"
+  #  src: "{{mount_item.src}}"
+  #  path: "{{mount_item.path}}"
+  #  state: mounted
+  #  opts: bind,{{ mount_item.mode | default('ro') }},auto,gid={{args.add.mount_opts.gid}},uid={{args.add.mount_opts.uid}}
+  #  fstype: none
+  #  boot: yes

@@ -1,0 +1,77 @@
+{# dirs
+Blocks example
+- type: Directory
+      dir: /var/www/html
+      lines:
+      - allow from all
+      - Options None
+      - Require all granted
+#}
+
+{% if https.port is defined -%}
+<VirtualHost *:{{https.port}}>
+{% else -%}
+<VirtualHost *:80>
+{% endif %}
+
+	DocumentRoot {{my_site.site_paths.htdocs.src}}
+	ServerName {{my_site.servername}}
+   {% if (my_site.serveraliases is defined) and (my_site.serveraliases | length > 0) -%}
+	ServerAlias {{my_site.serveraliases | join(' ') }}
+   {% endif -%}
+	ServerAdmin webmaster@{{my_site.servername}}
+
+	DirectoryIndex index.php index.html
+
+<IfModule mod_ssl.c>
+	{% if https.SSLCertificateFile is defined %}
+	SSLCertificateFile {{https.SSLCertificateFile}}
+	{% endif %}
+	{% if https.SSLCertificateKeyFile is defined %}
+	SSLCertificateKeyFile {{https.SSLCertificateKeyFile}}
+	{% endif %}
+</IfModule>
+
+    #ErrorLog ${APACHE_LOG_DIR}/{{my_site.servername}}/error.log
+    #CustomLog ${APACHE_LOG_DIR}/{{my_site.servername}}/access.log combined
+    ErrorLog {{my_site.site_paths.logs.src}}error.log
+    CustomLog {{my_site.site_paths.logs.src}}access.log combined
+	
+{% for alias in my_site.aliases %}
+	Alias {{alias.path}} {{alias.src}}
+{% endfor %}
+
+{% if my_site.handler is defined -%}
+    <FilesMatch \.php$>
+        SetHandler "{{my_site.handler}}"
+		#ProxyErrorOverride On
+    </FilesMatch>
+{% endif -%}
+	
+    <Directory "{{my_site.site_paths.htdocs.src}}">
+      Options Indexes FollowSymLinks
+      AllowOverride all
+      #Allow from all
+      Require all granted
+	</Directory>
+  
+{% if my_site.blocks is defined -%}
+{% for block in my_site.blocks %}
+	<{{block.type}} "{{block.dir}}">
+		{{ block.lines | join('\n\t\t') }}
+	</{{block.type}}>
+{% endfor %}
+{% endif -%}
+
+<IfModule php_module>
+	#Doesn't work with php-fpm (mod_php is disabled)
+    #php_admin_value upload_tmp_dir {{my_site.site_paths.phptmp.src}}
+    #php_admin_value sys_temp_dir {{my_site.site_paths.phptmp.src}}
+</IfModule>
+
+	<Files ".user.ini">
+      Require all denied
+    </Files>
+
+</VirtualHost>
+

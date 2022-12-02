@@ -1,0 +1,20 @@
+---
+
+- name: Import key
+  ansible.builtin.apt_key:
+    url: https://dl-ssl.google.com/linux/linux_signing_key.pub
+
+- name: Install mod_pagespeed
+  tags: [pagespeed_install]
+  block:
+  - name: Download mod_pagespeed
+    get_url: url={{opts_pagespeed.url}}{{opts_pagespeed.file}} dest={{gz_apache2_config.tmp_dir}}
+
+  - name: Install mod_pagespeed
+    notify: [restart apache2]
+    apt: deb="{{gz_apache2_config.tmp_dir}}/{{opts_pagespeed.file}}"
+
+  - name: Remove source file (Workaround signature expiration)
+    ansible.builtin.file:
+      path: '/etc/apt/sources.list.d/mod-pagespeed.list'
+      state: absent

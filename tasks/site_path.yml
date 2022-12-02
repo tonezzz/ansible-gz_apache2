@@ -1,0 +1,75 @@
+---
+
+- name: site prepare
+  tags: [check, apache2_check]
+  block:
+  - set_fact:
+      my_site: "{{ site | combine(gz_apache2_config.site, recursive=True) }}"
+  - debug: var=my_site
+
+- block:
+  - name: Create site dirs
+    vars:
+      args:
+        dirs:
+        - /var/www/{{my_site.domain}}/htdocs
+        - /var/www/{{my_site.domain}}/logs
+        - /var/www/{{my_site.domain}}/backups
+        - /var/www/{{my_site.domain}}/certs
+        - /var/www/{{my_site.domain}}/phptmp
+        - /var/log/apache2/{{my_site.domain}}
+    #debug: var=args
+    include_role: {name: gz_common ,tasks_from: create_dirs}
+
+  - name: Create index file
+    tags: [xnever]
+    when: my_site.index_tpl is defined
+    ansible.builtin.template:
+      src: "{{my_site.index_tpl}}"
+      dest: "/var/www/{{my_site.domain}}/htdocs/{{ my_site.index_name}}"
+
+  - name: Create phpinfo.php
+    tags: [xnever]
+    when: my_site.phpinfo is defined and my_site.phpinfo
+    ansible.builtin.template:
+      src: "phpinfo.php.j2"
+      dest: "/var/www/{{my_site.domain}}/htdocs/phpinfo.php"
+
+  - name: Create vhost (:80)
+    tags: [xnever]
+    ansible.builtin.template:
+      src: "{{my_site.vhost_tpl}}"
+      dest: "{{my_site.sites_available_dir}}{{my_site.domain}}.conf"
+
+  - name: a2ensite {{my_site.domain}}
+    tags: [xnever]
+    command: a2ensite {{my_site.domain}}
+    #args:
+    #  creates: /etc/apache2/sites-enabled/{{my_site.กนทฟรื}}.conf
+    notify: [restart apache2]  #Notify in add_websites.yml instead.
+
+  - name: Create SSL certificate
+    tags: [xnever]
+    vars:
+      ssl:
+      - "{{my_site.domain}}"
+    include_tasks: ssl.yml
+    
+  - name: Create vhost (:443)
+    tags: [xnever]
+    vars:
+      ssl_path: "/var/www/{{my_site.domain}}/certs"
+      privatekey_path: "{{ssl_path}}/{{my_site.domain}}.key"
+      #csr_path: "{{ssl_path}}/{{item}}.csr"
+      crt_path: "{{ssl_path}}/{{my_site.domain}}.crt"
+      https:
+        port: 443
+        SSLCertificateFile: "{{crt_path}}"
+        SSLCertificateKeyFile: "{{privatekey_path}}"
+        #SSLCertificateChainFile:
+    ansible.builtin.template: {src: "{{my_site.vhost_tpl}}" ,dest: "{{my_site.sites_available_dir}}{{my_site.domain}}_ssl.conf" }
+    
+  - name: a2ensite {{my_site.domain}}_ssl
+    tags: [xnever]
+    command: a2ensite {{my_site.domain}}_ssl
+    notify: [restart apache2]  #Notify in add_websites.yml instead.

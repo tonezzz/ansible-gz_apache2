@@ -1,0 +1,21 @@
+---
+
+- name: a2dismod
+  tags: [a2dismod]
+  notify: [restart apache2]
+  when: (args.a2mod.disable is defined)
+  loop: "{{args.a2mod.disable}}"
+  vars:
+    cmd: a2dismod {{item}}
+  #debug: var=cmd
+  shell: "{{cmd}}"
+
+- name: a2enmod
+  tags: [a2enmod]
+  notify: [restart apache2]
+  when: (args.a2mod.enable is defined)
+  loop: "{{args.a2mod.enable}}"
+  vars:
+    cmd: a2enmod {{item}}
+  #debug: var=cmd
+  shell: "{{cmd}}"

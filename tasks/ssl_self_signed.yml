@@ -1,0 +1,38 @@
+---
+
+#Example:
+#  ssl:
+#  - www.domain.com dirs
+
+- name: Add SSL (self signed)
+  vars:
+    certs_path: "{{my_site.site_paths.certs.src}}"
+    privatekey_path: "{{certs_path}}/{{my_site.servername}}.key"
+    csr_path: "{{certs_path}}/{{my_site.servername}}.csr"
+    crt_path: "{{certs_path}}/{{my_site.servername}}.crt"
+  block:
+  #- debug: var=ssl
+  - name: Check existing ssl
+    stat:
+      path: "{{csr_path}}"
+    register: file
+
+  - name: Create private key
+    when: file.stat.exists==false
+    openssl_privatekey:
+      path: "{{privatekey_path}}"
+
+  - name: Create CSR
+    when: file.stat.exists==false
+    openssl_csr:
+      path: "{{csr_path}}"
+      privatekey_path: "{{privatekey_path}}"
+      common_name: "{{my_site.servername}}"
+
+  - name: Create SSL certificates
+    when: file.stat.exists==false
+    openssl_certificate:
+      provider: selfsigned
+      path: "{{crt_path}}"
+      privatekey_path: "{{privatekey_path}}"
+      csr_path: "{{csr_path}}"

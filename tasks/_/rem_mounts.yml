@@ -1,0 +1,10 @@
+---
+
+- name: Rem mounts
+  when: args.rem.mounts is defined
+  loop: "{{args.rem.mounts}}"
+  loop_control: {loop_var: mount}
+  #debug: var=mount
+  mount:
+    path: "{{mount}}"
+    state: absent
